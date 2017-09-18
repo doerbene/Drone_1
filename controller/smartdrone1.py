@@ -6,7 +6,7 @@ from datetime import datetime
 from configparser import ConfigParser
 try:                                        # You have to install those two modules
     import smbus
-    import RPi.GPIO as GPIO
+    import pigpio
 except:
     print("[Error] Error while importing smbus and RPi")
     sys.exit(1)
@@ -98,10 +98,39 @@ class Sensors:
 
 
 class Engine:
+    engine_activation_pin = [[ConfigLoader.get_string("engine1", "activation_pin"), False],    # The variable engine_activation_pin contains
+                             [ConfigLoader.get_string("engine2", "activation_pin"), False],    # data to the activation_pin of an engine it
+                             [ConfigLoader.get_string("engine3", "activation_pin"), False],    # should affect and to the current state of that
+                             [ConfigLoader.get_string("engine4", "activation_pin"), False]]    # particular pin (High = True, Low = False)
+    engine_control_pin = [[ConfigLoader.get_string("engine1", "control_pin"), 0, ConfigLoader.get_string("engine1", "trim_level")],   # The variable engine_control_pin contains data to the
+                          [ConfigLoader.get_string("engine2", "control_pin"), 0, ConfigLoader.get_string("engine2", "trim_level")],   # control_pin of an engine it should affect, to the current
+                          [ConfigLoader.get_string("engine3", "control_pin"), 0, ConfigLoader.get_string("engine3", "trim_level")],   # voltage of that particular engine (0 = no_voltage; min_u = 55, max_u = 255)
+                          [ConfigLoader.get_string("engine4", "control_pin"), 0, ConfigLoader.get_string("engine4", "trim_level")]]   # and the trim_level which will affect the voltage a tiny bit
+
     def set_voltage_level(engine, voltage):
-        pass
-    def get_voltage_level(engine):
-        pass
+        if engine_control_pin[engine][2] != 0 and voltage != 0:
+            voltage = voltage + voltage * engine_control_pin[engine][2]
+        if voltage >= 55 and not Engine.engine_activation_pin[engine][1]:
+            Engine.engine_activation_pin[engine][1] = True
+            pi.write(Engine.engine_activation_pin[engine][0], 1)               # This sets the activation_pin to High voltage
+        elif voltage < 55:
+            voltage = 0
+            if Engine.engine_activation_pin[engine][1]
+                pi.write(Engine.engine_activation_pin[engine][0], 0)               # This sets the activation_pin to Low voltage
+                Engine.engine_activation_pin[engine][1] = False
+
+        pi.set_PWM_dutycycle(engine_control_pin[engine][0])
+        engine_control_pin[engine][1] = voltage
+
+    def get_voltage_level(engine, pintype):
+        if pintype == 1:
+            return engine_activation_pin[engine][1]
+        else pintype == 2:
+            return engine_control_pin[engine][1]
+
+    def get_trim_level(engine):
+        return engine_control_pin[engine][2]
+
     def trim(engine):
         pass
 
@@ -190,3 +219,4 @@ if log.logging:
 print("[Info] Logger successfully initialized")
 
 bus = smbus.SMBus(1)
+pi = pigpio.pi()
