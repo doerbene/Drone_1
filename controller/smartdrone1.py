@@ -6,7 +6,7 @@ from datetime import datetime
 from configparser import ConfigParser
 try:                                        # You have to install those two modules
     import smbus
-    import RPi.GPIO as GPIO
+    import pigpio
 except:
     print("[Error] Error while importing smbus and RPi")
     sys.exit(1)
@@ -31,9 +31,9 @@ class Vector:
 
     def __init__(self, a, b, c, angles=False):
         if angles:
-            self.roll = a%360
-            self.pitch = b%360
-            self.yaw = c%360
+            self.roll = a
+            self.pitch = b
+            self.yaw = c
         else:
             self.x = a
             self.y = b
@@ -98,10 +98,50 @@ class Sensors:
 
 
 class Engine:
+    engine_activation_pin = [[ConfigLoader.get_string("engine1", "activation_pin"), False],    # The variable engine_activation_pin contains
+                             [ConfigLoader.get_string("engine2", "activation_pin"), False],    # data to the activation_pin of an engine it
+                             [ConfigLoader.get_string("engine3", "activation_pin"), False],    # should affect and to the current state of that
+                             [ConfigLoader.get_string("engine4", "activation_pin"), False]]    # particular pin (High = True, Low = False)
+    engine_control_pin = [[ConfigLoader.get_string("engine1", "control_pin"), 0, ConfigLoader.get_string("engine1", "trim_level"), ConfigLoader.get_string("engine1", "activation_level")],   # The variable engine_control_pin contains data to the control_pin of
+                          [ConfigLoader.get_string("engine2", "control_pin"), 0, ConfigLoader.get_string("engine2", "trim_level"), ConfigLoader.get_string("engine2", "activation_level")],   # anengine it should affect, to the current voltage of that particular
+                          [ConfigLoader.get_string("engine3", "control_pin"), 0, ConfigLoader.get_string("engine3", "trim_level"), ConfigLoader.get_string("engine3", "activation_level")],   # engine (0 = no_voltage; min_u = activation_level, max_u = 255) and the trim_level which
+                          [ConfigLoader.get_string("engine4", "control_pin"), 0, ConfigLoader.get_string("engine4", "trim_level"), ConfigLoader.get_string("engine4", "activation_level")]]   # will affect the voltage a tiny bit. On top of that also the activation_level is saved here
+
     def set_voltage_level(engine, voltage):
-        pass
-    def get_voltage_level(engine):
-        pass
+        if engine_control_pin[engine][2] != 0 and voltage != 0:
+            voltage = voltage + voltage * engine_control_pin[engine][2]
+        if voltage >= engine_control_pin[engine][3] and not Engine.engine_activation_pin[engine][1]:
+            Engine.engine_activation_pin[engine][1] = True
+            pi.write(Engine.engine_activation_pin[engine][0], 1)               # This sets the activation_pin to High voltage
+        elif voltage < engine_control_pin[engine][3]:
+            voltage = 0
+            if Engine.engine_activation_pin[engine][1]
+                pi.write(Engine.engine_activation_pin[engine][0], 0)               # This sets the activation_pin to Low voltage
+                Engine.engine_activation_pin[engine][1] = False
+
+        pi.set_PWM_dutycycle(Engine.engine_control_pin[engine][0])
+        Engine.engine_control_pin[engine][1] = voltage
+
+    def get_voltage_level(engine, pintype):                     # Pintype 1 = activation_pin; 2 = control_pin
+        if pintype == 1:
+            return Engine.engine_activation_pin[engine][1]
+        else pintype == 2:
+            return Engine.engine_control_pin[engine][1]
+
+    def get_trim_level(engine):
+        return Engine.engine_control_pin[engine][2]
+
+    def trim():
+        accelaration = Sensors.get_accelaration()
+        gyroscope = Sensors.get_gyro()
+        if Engine.get_voltage_level(0, 2) == 0 and Engine.get_voltage_level(1, 2) == 0 and Engine.get_voltage_level(2, 2) == 0 and Engine.get_voltage_level(3, 2) == 0 and int accelaration.x == 0 and int acceleration.y == 0 and int accelaration.z == 0 and int gyroscope.yaw == 90:
+            # TODO: PROGRAM THE TRIM FUNCTION!!!!
+            return True
+        else:
+            print("[Warning] You can't trim if the drone is not on the ground or on a plain surface!")
+            return False
+
+
     def trim(engine):
         pass
 
@@ -189,6 +229,10 @@ if log.logging:
     print("[Info] Logger successfully initialized")
 
 bus = smbus.SMBus(1)
+<<<<<<< HEAD
 
 print(Sensors.get_accelaration().x)
 
+=======
+pi = pigpio.pi()
+>>>>>>> 69d93b05e28361dc9953c81a4f1830c60e2e1c9a
