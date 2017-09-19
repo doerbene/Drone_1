@@ -55,13 +55,15 @@ class Sensors:
     REG_GYROY = [0x45, 0x46]        # These 2 Registers are the High and the low byte for our gyroscope sensor in y direction (pitch)
     REG_GYROZ = [0x47, 0x48]        # These 2 Registers are the High and the low byte for our gyroscope sensor in z direction (yaw)
 
+    device1 = 0x69
+
     def get_accelaration():
-        accelx_high = bus.read_byte_data(69, Sensors.REG_ACCELX[0])
-        accelx_low = bus.read_byte_data(69, Sensors.REG_ACCELX[1])
-        accely_high = bus.read_byte_data(69, Sensors.REG_ACCELY[0])
-        accely_low = bus.read_byte_data(69, Sensors.REG_ACCELY[1])
-        accelz_high = bus.read_byte_data(69, Sensors.REG_ACCELZ[0])
-        accelz_low = bus.read_byte_data(69, Sensors.REG_ACCELZ[1])
+        accelx_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELX[0])
+        accelx_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELX[1])
+        accely_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELY[0])
+        accely_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELY[1])
+        accelz_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELZ[0])
+        accelz_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELZ[1])
 
         accelx = (accelx_high << 8) + accelx_low
         accely = (accely_high << 8) + accely_low
@@ -70,12 +72,12 @@ class Sensors:
         return Vector(accelx, accely, accelz)
 
     def get_gyro():
-        gyrox_high = bus.read_byte_data(69, Sensors.REG_GYROX[0])
-        gyrox_low = bus.read_byte_data(69, Sensors.REG_GYROX[1])
-        gyroy_high = bus.read_byte_data(69, Sensors.REG_GYROY[0])
-        gyroy_low = bus.read_byte_data(69, Sensors.REG_GYROY[1])
-        gyroz_high = bus.read_byte_data(69, Sensors.REG_GYROZ[0])
-        gyroz_low = bus.read_byte_data(69, Sensors.REG_GYROZ[1])
+        gyrox_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROX[0])
+        gyrox_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROX[1])
+        gyroy_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROY[0])
+        gyroy_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROY[1])
+        gyroz_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROZ[0])
+        gyroz_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROZ[1])
 
         gyrox = (gyrox_high << 8) + gyrox_low
         gyroy = (gyroy_high << 8) + gyroy_low
@@ -84,8 +86,8 @@ class Sensors:
         return Vector(gyrox, gyroy, gyroz, angles=True)     # TODO: Check if the sensor really gives back an angle
 
     def get_temp():
-        temp_high = bus.read_byte_data(69, Sensors.REG_TEMP[0])
-        temp_low = bus.read_byte_data(69, Sensors.REG_TEMP[1])
+        temp_high = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[0])
+        temp_low = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[1])
         temp = (temp_high << 8) + temp_low
         return temp
 
