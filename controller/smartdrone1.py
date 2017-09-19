@@ -56,12 +56,12 @@ class Sensors:
     REG_GYROZ = [0x47, 0x48]        # These 2 Registers are the High and the low byte for our gyroscope sensor in z direction (yaw)
 
     def get_accelaration():
-        accelx_high = bus.read_byte(REG_ACCELX[0])
-        accelx_low = bus.read_byte(REG_ACCELX[1])
-        accely_high = bus.read_byte(REG_ACCELY[0])
-        accely_low = bus.read_byte(REG_ACCELY[1])
-        accelz_high = bus.read_byte(REG_ACCELZ[0])
-        accelz_low = bus.read_byte(REG_ACCELZ[1])
+        accelx_high = bus.read_byte_data(69, Sensors.REG_ACCELX[0])
+        accelx_low = bus.read_byte_data(69, Sensors.REG_ACCELX[1])
+        accely_high = bus.read_byte_data(69, Sensors.REG_ACCELY[0])
+        accely_low = bus.read_byte_data(69, Sensors.REG_ACCELY[1])
+        accelz_high = bus.read_byte_data(69, Sensors.REG_ACCELZ[0])
+        accelz_low = bus.read_byte_data(69, Sensors.REG_ACCELZ[1])
 
         accelx = (accelx_high << 8) + accelx_low
         accely = (accely_high << 8) + accely_low
@@ -70,12 +70,12 @@ class Sensors:
         return Vector(accelx, accely, accelz)
 
     def get_gyro():
-        gyrox_high = bus.read_byte(REG_GYROX[0])
-        gyrox_low = bus.read_byte(REG_GYROX[1])
-        gyroy_high = bus.read_byte(REG_GYROY[0])
-        gyroy_low = bus.read_byte(REG_GYROY[1])
-        gyroz_high = bus.read_byte(REG_GYROZ[0])
-        gyroz_low = bus.read_byte(REG_GYROZ[1])
+        gyrox_high = bus.read_byte_data(69, Sensors.REG_GYROX[0])
+        gyrox_low = bus.read_byte_data(69, Sensors.REG_GYROX[1])
+        gyroy_high = bus.read_byte_data(69, Sensors.REG_GYROY[0])
+        gyroy_low = bus.read_byte_data(69, Sensors.REG_GYROY[1])
+        gyroz_high = bus.read_byte_data(69, Sensors.REG_GYROZ[0])
+        gyroz_low = bus.read_byte_data(69, Sensors.REG_GYROZ[1])
 
         gyrox = (gyrox_high << 8) + gyrox_low
         gyroy = (gyroy_high << 8) + gyroy_low
@@ -84,8 +84,8 @@ class Sensors:
         return Vector(gyrox, gyroy, gyroz, angles=True)     # TODO: Check if the sensor really gives back an angle
 
     def get_temp():
-        temp_high = bus.read_byte(REG_TEMP[0])
-        temp_low = bus.read_byte(REG_TEMP[1])
+        temp_high = bus.read_byte_data(69, Sensors.REG_TEMP[0])
+        temp_low = bus.read_byte_data(69, Sensors.REG_TEMP[1])
         temp = (temp_high << 8) + temp_low
         return temp
 
@@ -136,6 +136,7 @@ class Logger:           # if an instance is made the program can switch between 
     def __init__(self):
         if len(sys.argv) > 1:
             if sys.argv[1] == "-d":
+                print("[Info] Debug-mode started. Fix your errors :)")
                 logging.basicConfig(filename="logs/drone1_(ver."+version+")_" + self.get_time("date") + ".log", format=self.get_time() + ' - %(name)s - %(levelname)s - %(message)s')
                 root = logging.getLogger()
                 io = logging.StreamHandler(sys.stdout)
@@ -185,8 +186,9 @@ log = Logger()
 if log.logging:
     def print(*args, **kwargs):
         log.log.info(*args, **kwargs)
-    print("[Info] Debug-mode started. Fix your errors :)")
-
-print("[Info] Logger successfully initialized")
+    print("[Info] Logger successfully initialized")
 
 bus = smbus.SMBus(1)
+
+print(Sensors.get_accelaration().x)
+
