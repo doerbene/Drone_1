@@ -43,19 +43,19 @@ class Vector:
 class Sensors:
     # Registers: TODO: Put them into a config to allow other users to switch sensors more easy
     # Accelaration
-    REG_ACCELX = [0x3b, 0x3c]       # These 2 Registers are the High and the low byte for our accelaration sensor in x direction
-    REG_ACCELY = [0x3d, 0x3e]       # These 2 Registers are the High and the low byte for our accelaration sensor in y direction
-    REG_ACCELZ = [0x3f, 0x40]       # These 2 Registers are the High and the low byte for our accelaration sensor in z direction
+    REG_ACCELX = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_roll_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_roll_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in x direction
+    REG_ACCELY = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_pitch_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_pitch_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in y direction
+    REG_ACCELZ = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_yaw_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_yaw_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in z direction
 
     # Temperature
-    REG_TEMP = [0x41, 0x42]         # These 2 Registers are the High and the low byte for our temperature sensor
+    REG_TEMP = [ConfigLoader.get_string("GyroAccTempSensor", "temp_high"), ConfigLoader.get_string("GyroAccTempSensor", "temp_low")]         # These 2 Registers are the High and the low byte for our temperature sensor
 
     # Gyroscope
-    REG_GYROX = [0x43, 0x44]        # These 2 Registers are the High and the low byte for our gyroscope sensor in x direction (roll)
-    REG_GYROY = [0x45, 0x46]        # These 2 Registers are the High and the low byte for our gyroscope sensor in y direction (pitch)
-    REG_GYROZ = [0x47, 0x48]        # These 2 Registers are the High and the low byte for our gyroscope sensor in z direction (yaw)
+    REG_GYROX = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_x_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_x_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in x direction (roll)
+    REG_GYROY = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_y_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_y_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in y direction (pitch)
+    REG_GYROZ = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_z_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_z_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in z direction (yaw)
 
-    device1 = 0x69
+    device1 = ConfigLoader.get_string("GyroAccTempSensor", "address")
 
     def get_accelaration():
         accelx_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELX[0])
@@ -68,6 +68,10 @@ class Sensors:
         accelx = (accelx_high << 8) + accelx_low
         accely = (accely_high << 8) + accely_low
         accelz = (accelz_high << 8) + accelz_low
+
+        accelx = int(accelx, 16)
+        accely = int(accely, 16)
+        accelz = int(accelz, 16)
 
         return Vector(accelx, accely, accelz)
 
@@ -83,12 +87,17 @@ class Sensors:
         gyroy = (gyroy_high << 8) + gyroy_low
         gyroz = (gyroz_high << 8) + gyroz_low
 
+        gyrox = int(gyrox, 16)
+        gyroy = int(gyroy, 16)
+        gyroz = int(gyroz, 16)
+
         return Vector(gyrox, gyroy, gyroz, angles=True)     # TODO: Check if the sensor really gives back an angle
 
     def get_temp():
         temp_high = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[0])
         temp_low = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[1])
         temp = (temp_high << 8) + temp_low
+        temp = int(temp, 16)
         return temp
 
     def get_ultrasonic(sensor):     # Sensor is the Sensor which you want to get the ultrasonic information from
