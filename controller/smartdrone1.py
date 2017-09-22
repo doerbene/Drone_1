@@ -2,13 +2,14 @@ import sys
 import io
 import logging
 import time
+import math
 from datetime import datetime
 from configparser import ConfigParser
-try:                                        # You have to install those two modules
+try:                                      # You have to install those two modules
     import smbus
     import pigpio
 except:
-    print("[Error] Error while importing smbus and RPi")
+    print("[Error] Error while importing smbus and pigpio")
     sys.exit(1)
 
 
@@ -39,66 +40,114 @@ class Vector:
             self.y = b
             self.z = c
 
+    def add_vectors(vec1, vec2, same_direction = True):
+        if same_direction:
+            vec1.x += vec2.x
+            vec1.y += vec2.y
+            vec1.z += vec2.z
+            return vec1
+        else:
+            pass
+
+
+class ConfigLoader:
+    def get_string(section, attribute, config_file="smartdrone1.conf"):
+        config = ConfigParser()
+        config.read(config_file)
+        config.sections()
+        if not config.has_section(section):
+            print("[Warning] No section " + section + " in " + config_file.name + " found!")
+            return None
+        result = config[section][attribute]
+        if result is None:
+            print("[Warning] The result is None")
+        return result
+
+    def set_string(section, attribute, value, config_file="smartdrone1.conf"):
+        config = ConfigParser.read(config_file)
+        if config.has_section(section) is False:
+            config.add_section(section)
+            config.set(section, attribute, value)
+            config.write()
+            print("[Info] " + section + "." + attribute + " of " + config_file.name + " is now " + value + ".")
+
 
 class Sensors:
-    # Registers: TODO: Put them into a config to allow other users to switch sensors more easy
-    # Accelaration
-    REG_ACCELX = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_roll_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_roll_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in x direction
-    REG_ACCELY = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_pitch_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_pitch_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in y direction
-    REG_ACCELZ = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_yaw_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_yaw_low")]       # These 2 Registers are the High and the low byte for our accelaration sensor in z direction
+    # device
+    address = ConfigLoader.get_string("GyroAccTempSensor", "address")
 
-    # Temperature
-    REG_TEMP = [ConfigLoader.get_string("GyroAccTempSensor", "temp_high"), ConfigLoader.get_string("GyroAccTempSensor", "temp_low")]         # These 2 Registers are the High and the low byte for our temperature sensor
+    # gyro
+    REG_GYROX = ConfigLoader.get_string("GyroAccTempSensor", "gyro_roll")
+    REG_GYROY = ConfigLoader.get_string("GyroAccTempSensor", "gyro_pitch")
+    REG_GYROZ = ConfigLoader.get_string("GyroAccTempSensor", "gyro_yaw")
 
-    # Gyroscope
-    REG_GYROX = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_x_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_x_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in x direction (roll)
-    REG_GYROY = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_y_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_y_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in y direction (pitch)
-    REG_GYROZ = [ConfigLoader.get_string("GyroAccTempSensor", "gyro_z_high"), ConfigLoader.get_string("GyroAccTempSensor", "gyro_z_low")]        # These 2 Registers are the High and the low byte for our gyroscope sensor in z direction (yaw)
+    # temp
+    REG_TEMP = ConfigLoader.get_string("GyroAccTempSensor", "temp")
 
-    device1 = ConfigLoader.get_string("GyroAccTempSensor", "address")
+    # accel
+    REG_ACCELX = ConfigLoader.get_string("GyroAccTempSensor", "acc_x")
+    REG_ACCELY = ConfigLoader.get_string("GyroAccTempSensor", "acc_y")
+    REG_ACCELZ = ConfigLoader.get_string("GyroAccTempSensor", "acc_z")
 
-    def get_accelaration():
-        accelx_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELX[0])
-        accelx_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELX[1])
-        accely_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELY[0])
-        accely_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELY[1])
-        accelz_high = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELZ[0])
-        accelz_low = bus.read_byte_data(Sensors.device1, Sensors.REG_ACCELZ[1])
+    acceX0 = 0
+    acceY0 = 0
+    acceZ0 = 0
+    gyroX0 = 0
+    gyroY0 = 0
+    gyroZ0 = 0
 
-        accelx = (accelx_high << 8) + accelx_low
-        accely = (accely_high << 8) + accely_low
-        accelz = (accelz_high << 8) + accelz_low
+    def read_word(reg):
+        h = bus.read_byte_data(int(Sensors.address, 16), int(reg, 16))
+        l = bus.read_byte_data(int(Sensors.address, 16), int(reg, 16)+1)
+        return ((h << 8) + l)
 
-        accelx = int(accelx, 16)
-        accely = int(accely, 16)
-        accelz = int(accelz, 16)
+    def read_word_2c(reg):
+        val = Sensors.read_word(reg)
+        if val >= 0x8000:
+            return -(65536-val)
+        else:
+            return val
 
-        return Vector(accelx, accely, accelz)
+    def initialize():
+        times = 0
+        acc = Vector(0, 0, 0)
+        gyro = Vector(0, 0, 0)
+        for i in range (1000):
+            acc = Vector.add_vectors(acc, Sensors.get_accelaration())
+            gyro = Vector.add_vectors(gyro, Sensors.get_gyro())
+            times += 1
+
+        Sensors.acceX0 = -acc.x/times
+        Sensors.acceY0 = -acc.y/times
+        Sensors.acceZ0 = 1-acc.z/times
+        Sensors.gyroX0 = -gyro.x/times
+        Sensors.gyroY0 = -gyro.y/times
+        Sensors.gyroZ0 = -gyro.z/times
 
     def get_gyro():
-        gyrox_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROX[0])
-        gyrox_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROX[1])
-        gyroy_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROY[0])
-        gyroy_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROY[1])
-        gyroz_high = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROZ[0])
-        gyroz_low = bus.read_byte_data(Sensors.device1, Sensors.REG_GYROZ[1])
+        gyrox = (int(str(Sensors.read_word_2c(Sensors.REG_GYROX)), 16) + Sensors.gyroX0)/131
+        gyroy = (int(str(Sensors.read_word_2c(Sensors.REG_GYROY)), 16) + Sensors.gyroY0)/131
+        gyroz = (int(str(Sensors.read_word_2c(Sensors.REG_GYROZ)), 16) + Sensors.gyroZ0)/131
+        return Vector(gyrox, gyroy, gyroz)     # TODO: Check if the sensor really gives back an angle
 
-        gyrox = (gyrox_high << 8) + gyrox_low
-        gyroy = (gyroy_high << 8) + gyroy_low
-        gyroz = (gyroz_high << 8) + gyroz_low
+    def get_accelaration():
+        accelx = int(str(Sensors.read_word_2c(Sensors.REG_ACCELX)), 16) / 16384 + Sensors.acceX0
+        accely = int(str(Sensors.read_word_2c(Sensors.REG_ACCELY)), 16) / 16384 + Sensors.acceY0
+        accelz = int(str(Sensors.read_word_2c(Sensors.REG_ACCELZ)), 16) / 16384 + Sensors.acceZ0
+        return Vector(accelx, accely, accelz)
 
-        gyrox = int(gyrox, 16)
-        gyroy = int(gyroy, 16)
-        gyroz = int(gyroz, 16)
+    def dist(a, b):
+        return math.sqrt((a*a)+(b*b))
 
-        return Vector(gyrox, gyroy, gyroz, angles=True)     # TODO: Check if the sensor really gives back an angle
+    def get_rotation():
+        acc = Sensors.get_accelaration()
+        rotX = math.degrees(math.atan2(acc.y, dist(acc.x, acc.z)))
+        rotY = math.degrees(math.atan2(acc.x, dist(acc.y, acc.z)))
+        rotZ = math.degrees(math.atan2(acc.z, math.sqrt(acc.x, acc.y))) # TODO: get the right formula
+        return Vector(rotX, rotY, rotZ, True)
 
     def get_temp():
-        temp_high = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[0])
-        temp_low = bus.read_byte_data(Sensors.device1, Sensors.REG_TEMP[1])
-        temp = (temp_high << 8) + temp_low
-        temp = int(temp, 16)
-        return temp
+        return (int(read_word_2c(REG_TEMP), 16) / 340 + 36.53)
 
     def get_ultrasonic(sensor):     # Sensor is the Sensor which you want to get the ultrasonic information from
         pass
@@ -126,7 +175,7 @@ class Engine:
             pi.write(Engine.engine_activation_pin[engine][0], 1)               # This sets the activation_pin to High voltage
         elif voltage < engine_control_pin[engine][3]:
             voltage = 0
-            if Engine.engine_activation_pin[engine][1]
+            if Engine.engine_activation_pin[engine][1]:
                 pi.write(Engine.engine_activation_pin[engine][0], 0)               # This sets the activation_pin to Low voltage
                 Engine.engine_activation_pin[engine][1] = False
 
@@ -136,7 +185,7 @@ class Engine:
     def get_voltage_level(engine, pintype):                     # Pintype 1 = activation_pin; 2 = control_pin
         if pintype == 1:
             return Engine.engine_activation_pin[engine][1]
-        else pintype == 2:
+        elif pintype == 2:
             return Engine.engine_control_pin[engine][1]
 
     def get_trim_level(engine):
@@ -144,13 +193,13 @@ class Engine:
 
     def trim():
         accelaration = Sensors.get_accelaration()
-        gyroscope = Sensors.get_gyro()
-        if Engine.get_voltage_level(0, 2) == 0 and Engine.get_voltage_level(1, 2) == 0 and Engine.get_voltage_level(2, 2) == 0 and Engine.get_voltage_level(3, 2) == 0 and int accelaration.x == 0 and int acceleration.y == 0 and int accelaration.z == 0 and int gyroscope.yaw == 90:
+#        gyroscope = Sensors.get_rotation()
+#        if Engine.get_voltage_level(0, 2) == 0 and Engine.get_voltage_level(1, 2) == 0 and Engine.get_voltage_level(2, 2) == 0 and Engine.get_voltage_level(3, 2) == 0 and int accelaration.x == 0 and int acceleration.y == 0 and int accelaration.z == 0 and int gyroscope.yaw == 90:
             # TODO: PROGRAM THE TRIM FUNCTION!!!!
-            return True
-        else:
-            print("[Warning] You can't trim if the drone is not on the ground or on a plain surface!")
-            return False
+#            return True
+#        else:
+#            print("[Warning] You can't trim if the drone is not on the ground or on a plain surface!")
+#            return False
 
 
     def trim(engine):
@@ -184,6 +233,7 @@ class NetworkManager:
 
 
 class Logger:           # if an instance is made the program can switch between a debug mode where everything will be logged and a normal mode with no outputs
+    logging = False
     def __init__(self):
         if len(sys.argv) > 1:
             if sys.argv[1] == "-d":
@@ -198,37 +248,14 @@ class Logger:           # if an instance is made the program can switch between 
                 root.setLevel(logging.DEBUG)
                 self.logging = True
                 self.log = logging
-        else:
-            self.logging = False
-            print("[Info] Normal-mode started. Ready to fly :)")
-
+            else:
+                print("[Info] Normal-mode started. Ready to fly :)")
     def get_time(self, string=""):
         date = datetime.now()
         if string is "date":
             return (str(date.year) + "_" + str(date.month) + "_" + str(date.day))
         else:
             return (str(date.year) + "-" + str(date.month) + "-" + str(date.day) + " " + str(date.hour) + ":" + str(date.minute) + ":" + str(date.second) + "'" + str(date.microsecond))
-
-
-class ConfigLoader:
-    def get_string(section, attribute, config_file="smartdrone1.conf"):
-        config = ConfigParser.read(config_file)
-        config.sections()
-        if not config.has_section(section):
-            print("[Warning] No section " + section + " in " + config_file.name + " found!")
-            return None
-        result = config[section][attribute]
-        if result is None:
-            print("[Warning] The result is None")
-        return result
-
-    def set_string(section, attribute, value, config_file="smartdrone1.conf"):
-        config = ConfigParser.read(config_file)
-        if config.has_section(section) is False:
-            config.add_section(section)
-        config.set(section, attribute, value)
-        config.write()
-        print("[Info] " + section + "." + attribute + " of " + config_file.name + " is now " + value + ".")
 
 
 version = "1.0"
@@ -240,10 +267,16 @@ if log.logging:
     print("[Info] Logger successfully initialized")
 
 bus = smbus.SMBus(1)
-<<<<<<< HEAD
 
-print(Sensors.get_accelaration().x)
+Sensors.initialize()
 
-=======
-pi = pigpio.pi()
->>>>>>> 69d93b05e28361dc9953c81a4f1830c60e2e1c9a
+while(True):
+    #print(Sensors.get_accelaration().x)
+    #print(Sensors.get_accelaration().y)
+    #print(Sensors.get_accelaration().z)
+    print(Sensors.get_gyro().x)
+    print(Sensors.get_gyro().y)
+    print(Sensors.get_gyro().z)
+    print("")
+    time.sleep(0.5)
+i = pigpio.pi()

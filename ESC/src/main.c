@@ -23,49 +23,24 @@ uint16_t ReadADC(uint8_t ADCchannel)
 
 int main(void) {
 
-  PRR |= (0<<PRADC);
-  ADCSRA |= (1<<ADEN) | (1<<ADSC) | (1<<ADPS0) | (1<<ADPS1) | (1<<ADPS2);
-  ADMUX |= (1<<ADLAR) ;
-  ADMUX |= (1<<REFS0);
+  //PRR |= (0<<PRADC);
+  //ADCSRA |= (1<<ADEN) | (1<<ADSC) | (1<<ADPS0) | (1<<ADPS1) | (1<<ADPS2);
+  //ADMUX |= (1<<ADLAR) ;
+  //ADMUX |= (1<<REFS0);
 
-  TCCR2A |= (1 << COM0A1);
-  TCCR2A |= (1 << WGM01) | (1 << WGM00);
-  TCCR2B |= (1 << CS01);
-
-  TCCR1A |= (1 << COM0A1);
-  TCCR1A |= (1 << WGM01) | (1 << WGM00);
-  TCCR1B |= (1 << CS01);
-
-  TCCR0A |= (1 << COM0A1);
-  TCCR0A |= (1 << WGM01) | (1 << WGM00);
-  TCCR0B |= (1 << CS01);
-
+  //TCCRA |= (1 << COM0A1);
+  //TCCRA |= (1 << WGM01) | (1 << WGM00);
+  //TCCRB |= (1 << CS01);
   sei();
 
   DDRC = 0b00000111;
+  DDRB = 0xFF;
 
   while(1){
-    OCR0A = ReadADC(Phase_A_Read);
-    OCR1A = ReadADC(Phase_B_Read);
-    OCR2A = ReadADC(Phase_C_Read);
-
-//    PORTC = 0b00000111;
-    PORTC |= (1);
-
-    _delay_ms(500);
-    PORTC = 0;
-
-    PORTC |= (1<<1);
-
-    _delay_ms(500);
-    PORTC = 0;
-
-    PORTC |= (1<<2);
-    _delay_ms(500);
-    //PORTC = 0b00000000;
-    PORTC = 0;
-
-    _delay_ms(500);
+    PORTB |= (1);
+    _delay_ms(25);
+    PORTB = 0;
+    _delay_ms(25);
   }
 
   return 0;
