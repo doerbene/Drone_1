@@ -289,6 +289,8 @@ class Engine:
 
 
 class Balance_mode:
+    def breaking():
+        pass
     def maintain_location():
         pass
     def maintain_angle():
@@ -298,6 +300,8 @@ class Balance_mode:
 class Control_mode:
     def autotrim():
         print("[Info] Autotrim activated")
+        Balance_mode.breaking()
+        Balance_mode.maintain_location()
     def anti_collision():                           # This method is just for later states of that program and won't be implemented at first
         pass
     def set_speed_level(new_speed):                 # The speed_level is the rate of how many percent an engine can get of its max-power
