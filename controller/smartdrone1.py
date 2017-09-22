@@ -67,9 +67,9 @@ class ConfigLoader:
         config = ConfigParser.read(config_file)
         if config.has_section(section) is False:
             config.add_section(section)
-            config.set(section, attribute, value)
-            config.write()
-            print("[Info] " + section + "." + attribute + " of " + config_file.name + " is now " + value + ".")
+        config.set(section, attribute, value)
+        config.write()
+        print("[Info] " + section + "." + attribute + " of " + config_file.name + " is now " + value + ".")
 
 
 class Sensors:
@@ -109,6 +109,7 @@ class Sensors:
             return val
 
     def initialize():
+        print("[Info] Sensor calibration...")
         times = 0
         acc = Vector(0, 0, 0)
         gyro = Vector(0, 0, 0)
@@ -123,6 +124,7 @@ class Sensors:
         Sensors.gyroX0 = -gyro.x/times
         Sensors.gyroY0 = -gyro.y/times
         Sensors.gyroZ0 = -gyro.z/times
+        print("[Info] Sensors calibrated.")
 
     def get_gyro():
         gyrox = (int(str(Sensors.read_word_2c(Sensors.REG_GYROX)), 16) + Sensors.gyroX0)/131
@@ -143,18 +145,18 @@ class Sensors:
         acc = Sensors.get_accelaration()
         rotX = math.degrees(math.atan2(acc.y, dist(acc.x, acc.z)))
         rotY = math.degrees(math.atan2(acc.x, dist(acc.y, acc.z)))
-        rotZ = math.degrees(math.atan2(acc.z, math.sqrt(acc.x, acc.y))) # TODO: get the right formula
+        rotZ = math.degrees(math.atan2(acc.z, dist(acc.x, acc.y))) # TODO: get the right formula
         return Vector(rotX, rotY, rotZ, True)
 
     def get_temp():
         return (int(read_word_2c(REG_TEMP), 16) / 340 + 36.53)
 
-    def get_ultrasonic(sensor):     # Sensor is the Sensor which you want to get the ultrasonic information from
-        pass
-    def get_gps_location():
-        pass
-    def get_radar(sensor):          # Sensor is the Sensor which you want to get the radar information from -> at this point is not used and implemented
-        pass
+#    def get_ultrasonic(sensor):     # Sensor is the Sensor which you want to get the ultrasonic information from
+#        pass
+#    def get_gps_location():
+#        pass
+#    def get_radar(sensor):          # Sensor is the Sensor which you want to get the radar information from -> at this point is not used and implemented
+#        pass
 
 
 class Engine:
@@ -162,25 +164,40 @@ class Engine:
                              [ConfigLoader.get_string("engine2", "activation_pin"), False],    # data to the activation_pin of an engine it
                              [ConfigLoader.get_string("engine3", "activation_pin"), False],    # should affect and to the current state of that
                              [ConfigLoader.get_string("engine4", "activation_pin"), False]]    # particular pin (High = True, Low = False)
-    engine_control_pin = [[ConfigLoader.get_string("engine1", "control_pin"), 0, ConfigLoader.get_string("engine1", "trim_level"), ConfigLoader.get_string("engine1", "activation_level")],   # The variable engine_control_pin contains data to the control_pin of
-                          [ConfigLoader.get_string("engine2", "control_pin"), 0, ConfigLoader.get_string("engine2", "trim_level"), ConfigLoader.get_string("engine2", "activation_level")],   # anengine it should affect, to the current voltage of that particular
-                          [ConfigLoader.get_string("engine3", "control_pin"), 0, ConfigLoader.get_string("engine3", "trim_level"), ConfigLoader.get_string("engine3", "activation_level")],   # engine (0 = no_voltage; min_u = activation_level, max_u = 255) and the trim_level which
-                          [ConfigLoader.get_string("engine4", "control_pin"), 0, ConfigLoader.get_string("engine4", "trim_level"), ConfigLoader.get_string("engine4", "activation_level")]]   # will affect the voltage a tiny bit. On top of that also the activation_level is saved here
+    engine_control_pin = [[ConfigLoader.get_string("engine1", "control_pin"), 0, ConfigLoader.get_string("engine1", "trim_level"), ConfigLoader.get_string("engine1", "activation_level"), ConfigLoader.get_string("engine1", "max_level")],   # The variable engine_control_pin contains data to the control_pin of
+                          [ConfigLoader.get_string("engine2", "control_pin"), 0, ConfigLoader.get_string("engine2", "trim_level"), ConfigLoader.get_string("engine2", "activation_level"), ConfigLoader.get_string("engine2", "max_level")],   # an engine it should affect, to the current voltage of that particular
+                          [ConfigLoader.get_string("engine3", "control_pin"), 0, ConfigLoader.get_string("engine3", "trim_level"), ConfigLoader.get_string("engine3", "activation_level"), ConfigLoader.get_string("engine3", "max_level")],   # engine (0 = no_voltage; min_u = activation_level, max_u = 255) and the trim_level which
+                          [ConfigLoader.get_string("engine4", "control_pin"), 0, ConfigLoader.get_string("engine4", "trim_level"), ConfigLoader.get_string("engine4", "activation_level"), ConfigLoader.get_string("engine4", "max_level")]]   # will affect the voltage a tiny bit. On top of that also the activation_level is saved here
+
+    def reload () :
+            engine_activation_pin = [[ConfigLoader.get_string("engine1", "activation_pin"), False],    # The variable engine_activation_pin contains
+                                     [ConfigLoader.get_string("engine2", "activation_pin"), False],    # data to the activation_pin of an engine it
+                                     [ConfigLoader.get_string("engine3", "activation_pin"), False],    # should affect and to the current state of that
+                                     [ConfigLoader.get_string("engine4", "activation_pin"), False]]    # particular pin (High = True, Low = False)
+            engine_control_pin = [[ConfigLoader.get_string("engine1", "control_pin"), 0, ConfigLoader.get_string("engine1", "trim_level"), ConfigLoader.get_string("engine1", "activation_level"), ConfigLoader.get_string("engine1", "max_level")],   # The variable engine_control_pin contains data to the control_pin of
+                                  [ConfigLoader.get_string("engine2", "control_pin"), 0, ConfigLoader.get_string("engine2", "trim_level"), ConfigLoader.get_string("engine2", "activation_level"), ConfigLoader.get_string("engine2", "max_level")],   # an engine it should affect, to the current voltage of that particular
+                                  [ConfigLoader.get_string("engine3", "control_pin"), 0, ConfigLoader.get_string("engine3", "trim_level"), ConfigLoader.get_string("engine3", "activation_level"), ConfigLoader.get_string("engine3", "max_level")],   # engine (0 = no_voltage; min_u = activation_level, max_u = 255) and the trim_level which
+                                  [ConfigLoader.get_string("engine4", "control_pin"), 0, ConfigLoader.get_string("engine4", "trim_level"), ConfigLoader.get_string("engine4", "activation_level"), ConfigLoader.get_string("engine4", "max_level")]]   # will affect the voltage a tiny bit. On top of that also the activation_level is saved here
 
     def set_voltage_level(engine, voltage):
         if engine_control_pin[engine][2] != 0 and voltage != 0:
             voltage = voltage + voltage * engine_control_pin[engine][2]
+        if voltage > Engine.engine_control_pin[engine][4]:               # default: 255 is 100%
+            voltage = Engine.engine_control_pin[engine][4]
         if voltage >= engine_control_pin[engine][3] and not Engine.engine_activation_pin[engine][1]:
             Engine.engine_activation_pin[engine][1] = True
             pi.write(Engine.engine_activation_pin[engine][0], 1)               # This sets the activation_pin to High voltage
+            print("[Info] Activation-Pin activated -> engines are online now.")
         elif voltage < engine_control_pin[engine][3]:
             voltage = 0
             if Engine.engine_activation_pin[engine][1]:
                 pi.write(Engine.engine_activation_pin[engine][0], 0)               # This sets the activation_pin to Low voltage
                 Engine.engine_activation_pin[engine][1] = False
+                print("[Info] Activation-Pin deactivated -> engines are offline now.")
 
         pi.set_PWM_dutycycle(Engine.engine_control_pin[engine][0])
         Engine.engine_control_pin[engine][1] = voltage
+        print("[Info] Engine " + engine + "'s power was set to " + str(voltage/(256-engine_control_pin[engine][3]) * 100)[:4] + "%.")
 
     def get_voltage_level(engine, pintype):                     # Pintype 1 = activation_pin; 2 = control_pin
         if pintype == 1:
@@ -192,17 +209,82 @@ class Engine:
         return Engine.engine_control_pin[engine][2]
 
     def trim():
+        print("[Info] Starting to trim enginges...")
         accelaration = Sensors.get_accelaration()
-#        gyroscope = Sensors.get_rotation()
-#        if Engine.get_voltage_level(0, 2) == 0 and Engine.get_voltage_level(1, 2) == 0 and Engine.get_voltage_level(2, 2) == 0 and Engine.get_voltage_level(3, 2) == 0 and int accelaration.x == 0 and int acceleration.y == 0 and int accelaration.z == 0 and int gyroscope.yaw == 90:
-            # TODO: PROGRAM THE TRIM FUNCTION!!!!
-#            return True
-#        else:
-#            print("[Warning] You can't trim if the drone is not on the ground or on a plain surface!")
-#            return False
+        rotation = Sensors.get_rotation()
+        print("[Info] Trimming Engine 1 and 2...")
+        if Engine.get_voltage_level(0, 2) == 0 and Engine.get_voltage_level(1, 2) == 0 and Engine.get_voltage_level(2, 2) == 0 and Engine.get_voltage_level(3, 2) == 0 and int(accelaration.x) == 0 and int(acceleration.y) == 0 and int(accelaration.z) == 1 and int(rotation.roll) == 0 and int(rotation.pitch) == 0:
+            # TODO: make an own method for this
+            Engine.set_voltage_level(0, Engine.engine_control_pin[0][3])
+            Engine.set_voltage_level(1, Engine.engine_control_pin[1][3])
+            while (math.abs(rotation.roll):
+                if rotation.pitch > 0.5:
+                    Engine.set_voltage_level(1, Engine.get_voltage_level(1, 2)-1)
+                if rotation.roll < -0.5:
+                    Enging.set_voltage_level(0, Engine.get_voltage_level(0, 2)-1)
+                Engine.set_voltage_level(0, Engine.get_voltage_level(0, 2)+1)
+                Engine.set_voltage_level(1, Engine.get_voltage_level(1, 2)+1)
+                rotation = Sensors.get_rotation()
+                if math.abs(rotation.pitch) > 2:
+                    Engine.set_voltage_level(0, 0)
+                    Engine.set_voltage_level(1, 0)          # If something goes wrong we land here...
+                    print("[Error] Something went wrong while trimming engine 1 and 2!")
+                    return False
+            power = [Engine.get_voltage_level(0, 2), Engine.get_voltage_level(1, 2)]
+            engine1 = 0
+            engine2 = 0
+            pwdif = power[1]-power[0]
+            pwdif2 = power[0]-power[1]
+            if pwdif>0:                     # TODO: Check this! It was late tonight!
+                engine1 = pwdif
+            elif pwdif2>0:
+                engine2 = pwdif2
+            ConfigLoader.set_string("engine1", "trim_level", engine1)
+            ConfigLoader.set_string("engine2", "trim_level", engine2)
+            ConfigLoader.set_string("engine1", "max_level", ConfigLoader.get_string("engine1", "max_level" + engine1))
+            ConfigLoader.set_string("engine2", "max_level", ConfigLoader.get_string("engine2", "max_level" + engine2))
+            print("[Info] Successfully trimmed engine 1 and 2.")
+            print("[Info] Trimming Engine 3 and 4...")
+            Engine.set_voltage_level(2, Engine.engine_control_pin[2][3])
+            Engine.set_voltage_level(3, Engine.engine_control_pin[3][3])
+            while (math.abs(rotation.roll):
+                if rotation.pitch > 0.5:
+                    Engine.set_voltage_level(3, Engine.get_voltage_level(3, 2)-1)
+                if rotation.roll < -0.5:
+                    Enging.set_voltage_level(2, Engine.get_voltage_level(2, 2)-1)
+                Engine.set_voltage_level(2, Engine.get_voltage_level(2, 2)+1)
+                Engine.set_voltage_level(3, Engine.get_voltage_level(3, 2)+1)
+                rotation = Sensors.get_rotation()
+                if math.abs(rotation.pitch) > 2:
+                    Engine.set_voltage_level(2, 0)
+                    Engine.set_voltage_level(3, 0)          # If something goes wrong we land here...
+                    print("[Error] Something went wrong while trimming Engine 3 and 4!")
+                    return False
+                power.append(Engine.get_voltage_level(2, 2), Engine.get_voltage_level(3, 2))
+                engine3 = 0
+                engine4 = 0
+                pwdif = power[3]-power[2]
+                pwdif2 = power[2]-power[3]
+                if pwdif>0:                     # TODO: Check this! It was late tonight!
+                    engine3 = pwdif
+                elif pwdif2>0:
+                    engine4 = pwdif2
+                ConfigLoader.set_string("engine3", "trim_level", engine3)
+                ConfigLoader.set_string("engine4", "trim_level", engine4)
+                ConfigLoader.set_string("engine1", "max_level", ConfigLoader.get_string("engine1", "max_level" + engine3))
+                ConfigLoader.set_string("engine2", "max_level", ConfigLoader.get_string("engine2", "max_level" + engine4))
+
+            print("[Info] Successfully trimmed engine 3 and 4.")
+            print("[Info] Trimming successful!")
+            # TODO: Fine trimming
+            reloadEngine()
+            return True
+        else:
+            print("[Warning] You can't trim if the drone is not on the ground or on a plain surface!")
+            return False
 
 
-    def trim(engine):
+    def trim(engine):       # here the program can maybe change the activation_level because of looking at the power consumption
         pass
 
 
@@ -270,7 +352,7 @@ bus = smbus.SMBus(1)
 
 Sensors.initialize()
 
-while(True):
+while(True):             # Just testing
     #print(Sensors.get_accelaration().x)
     #print(Sensors.get_accelaration().y)
     #print(Sensors.get_accelaration().z)
